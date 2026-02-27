@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -33,6 +34,20 @@ class NotificationService {
     );
 
     await _plugin.initialize(initializationSettings);
+
+    // Android 13+ requires runtime notification permission.
+    // If denied, scheduling may succeed but notifications won't show; don't crash the app.
+    try {
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      await android?.requestNotificationsPermission();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Notification permission request error: $e');
+      }
+    }
+
     _initialized = true;
   }
 
@@ -40,6 +55,51 @@ class NotificationService {
   int _examHourBeforeId(String examId) =>
       (examId.hashCode & 0x3fffffff) + 1000000;
   static const int _dailyStudyId = 9999999;
+
+  Future<void> _zonedScheduleWithExactFallback({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime scheduledDate,
+    required NotificationDetails details,
+    required DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledDate,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
+      );
+    } on PlatformException catch (e) {
+      // Android 12+ can block exact alarms unless user explicitly allows them.
+      if (e.code == 'exact_alarms_not_permitted') {
+        if (kDebugMode) {
+          debugPrint(
+            'Exact alarms not permitted; falling back to inexact scheduling.',
+          );
+        }
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: matchDateTimeComponents,
+        );
+        return;
+      }
+      rethrow;
+    }
+  }
 
   Future<void> scheduleTaskReminder(Task task) async {
     if (!_initialized) return;
@@ -51,12 +111,12 @@ class NotificationService {
     final id = _taskDayBeforeId(task.id);
     final tzTime = tz.TZDateTime.from(reminderTime, tz.local);
 
-    await _plugin.zonedSchedule(
-      id,
-      'Task Reminder',
-      'Tomorrow: ${task.title}',
-      tzTime,
-      const NotificationDetails(
+    await _zonedScheduleWithExactFallback(
+      id: id,
+      title: 'Task Reminder',
+      body: 'Tomorrow: ${task.title}',
+      scheduledDate: tzTime,
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           'tasks_channel',
           'Tasks',
@@ -65,10 +125,7 @@ class NotificationService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      matchDateTimeComponents: null,
     );
   }
 
@@ -82,12 +139,12 @@ class NotificationService {
     final id = _examHourBeforeId(exam.id);
     final tzTime = tz.TZDateTime.from(reminderTime, tz.local);
 
-    await _plugin.zonedSchedule(
-      id,
-      'Exam Reminder',
-      'In 1 hour: ${exam.title}',
-      tzTime,
-      const NotificationDetails(
+    await _zonedScheduleWithExactFallback(
+      id: id,
+      title: 'Exam Reminder',
+      body: 'In 1 hour: ${exam.title}',
+      scheduledDate: tzTime,
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           'exams_channel',
           'Exams',
@@ -96,10 +153,7 @@ class NotificationService {
           priority: Priority.high,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.dateAndTime,
+      matchDateTimeComponents: null,
     );
   }
 
@@ -114,12 +168,12 @@ class NotificationService {
 
     final tzTime = tz.TZDateTime.from(next6pm, tz.local);
 
-    await _plugin.zonedSchedule(
-      _dailyStudyId,
-      'Study Time',
-      'Daily reminder to review your subjects.',
-      tzTime,
-      const NotificationDetails(
+    await _zonedScheduleWithExactFallback(
+      id: _dailyStudyId,
+      title: 'Study Time',
+      body: 'Daily reminder to review your subjects.',
+      scheduledDate: tzTime,
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_study_channel',
           'Daily Study',
@@ -128,9 +182,6 @@ class NotificationService {
           priority: Priority.defaultPriority,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
