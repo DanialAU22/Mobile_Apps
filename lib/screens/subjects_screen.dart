@@ -84,6 +84,16 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                             await context
                                 .read<SubjectProvider>()
                                 .deleteSubject(subject.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Subject "${subject.name}" deleted',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
                           }
                         },
                       );
@@ -135,7 +145,17 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
       await provider.updateSubject(updated);
     }
 
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.existing == null ? 'Subject added' : 'Subject updated',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override

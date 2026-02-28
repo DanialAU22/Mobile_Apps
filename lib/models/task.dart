@@ -6,6 +6,9 @@ class Task {
   final DateTime? deadline;
   final String? priority; // 'low' | 'medium' | 'high'
   final bool isCompleted;
+  final bool isRecurring;
+  final String? recurrenceType; // 'daily' | 'weekly' | 'monthly'
+  final DateTime? recurrenceEndDate;
 
   const Task({
     required this.id,
@@ -15,6 +18,9 @@ class Task {
     this.deadline,
     this.priority,
     this.isCompleted = false,
+    this.isRecurring = false,
+    this.recurrenceType,
+    this.recurrenceEndDate,
   });
 
   Task copyWith({
@@ -25,6 +31,9 @@ class Task {
     DateTime? deadline,
     String? priority,
     bool? isCompleted,
+    bool? isRecurring,
+    String? recurrenceType,
+    DateTime? recurrenceEndDate,
   }) {
     return Task(
       id: id ?? this.id,
@@ -34,6 +43,9 @@ class Task {
       deadline: deadline ?? this.deadline,
       priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
+      isRecurring: isRecurring ?? this.isRecurring,
+      recurrenceType: recurrenceType ?? this.recurrenceType,
+      recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,
     );
   }
 
@@ -46,6 +58,9 @@ class Task {
       'deadline': deadline?.toIso8601String(),
       'priority': priority,
       'isCompleted': isCompleted ? 1 : 0,
+      'isRecurring': isRecurring ? 1 : 0,
+      'recurrenceType': recurrenceType,
+      'recurrenceEndDate': recurrenceEndDate?.toIso8601String(),
     };
   }
 
@@ -60,7 +75,18 @@ class Task {
           : null,
       priority: map['priority'] as String?,
       isCompleted: (map['isCompleted'] as int? ?? 0) == 1,
+      isRecurring: (map['isRecurring'] as int? ?? 0) == 1,
+      recurrenceType: map['recurrenceType'] as String?,
+      recurrenceEndDate: map['recurrenceEndDate'] != null
+          ? DateTime.tryParse(map['recurrenceEndDate'] as String)
+          : null,
     );
   }
-}
 
+  bool get isOverdue =>
+      !isCompleted &&
+      deadline != null &&
+      deadline!.isBefore(DateTime.now());
+
+  bool get isHighPriority => priority == 'high';
+}

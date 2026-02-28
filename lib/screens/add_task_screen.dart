@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/task.dart';
 import '../models/subject.dart';
+import '../models/task.dart';
 import '../providers/subject_provider.dart';
 import '../providers/task_provider.dart';
 import '../utils/helpers.dart';
@@ -21,6 +21,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Subject? _selectedSubject;
   DateTime? _deadline;
   String _priority = 'medium';
+  bool _isRecurring = false;
+  String? _recurrenceType;
+  DateTime? _recurrenceEndDate;
 
   Future<void> _pickDeadline() async {
     final now = DateTime.now();
@@ -36,9 +39,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       initialTime: TimeOfDay.fromDateTime(_deadline ?? now),
     );
     if (time == null) {
-      setState(() {
-        _deadline = date;
-      });
+      setState(() => _deadline = date);
       return;
     }
     setState(() {
@@ -52,9 +53,32 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     });
   }
 
+  Future<void> _pickRecurrenceEndDate() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      firstDate: _deadline ?? now,
+      lastDate: DateTime(now.year + 5),
+      initialDate: _recurrenceEndDate ?? (_deadline ?? now),
+    );
+    if (date != null) {
+      setState(() => _recurrenceEndDate = date);
+    }
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     _formKey.currentState?.save();
+
+    if (_isRecurring && _deadline == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Recurring tasks require a deadline.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     final task = Task(
       id: generateId(),
@@ -64,10 +88,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       deadline: _deadline,
       priority: _priority,
       isCompleted: false,
+      isRecurring: _isRecurring,
+      recurrenceType: _isRecurring ? (_recurrenceType ?? 'weekly') : null,
+      recurrenceEndDate: _isRecurring ? _recurrenceEndDate : null,
     );
 
     await context.read<TaskProvider>().addTask(task);
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Task saved'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -147,25 +182,58 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   ),
                   value: _priority,
                   items: const [
-                    DropdownMenuItem(
-                      value: 'low',
-                      child: Text('Low'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'medium',
-                      child: Text('Medium'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'high',
-                      child: Text('High'),
-                    ),
+                    DropdownMenuItem(value: 'low', child: Text('Low')),
+                    DropdownMenuItem(value: 'medium', child: Text('Medium')),
+                    DropdownMenuItem(value: 'high', child: Text('High')),
                   ],
                   onChanged: (v) {
-                    if (v != null) {
-                      setState(() => _priority = v);
-                    }
+                    if (v != null) setState(() => _priority = v);
                   },
                 ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Recurring task'),
+                  subtitle: Text(
+                    _isRecurring ? 'Repeats ${_recurrenceType ?? 'weekly'}' : '',
+                  ),
+                  value: _isRecurring,
+                  onChanged: (v) {
+                    setState(() {
+                      _isRecurring = v;
+                      if (v && _recurrenceType == null) {
+                        _recurrenceType = 'weekly';
+                      }
+                    });
+                  },
+                ),
+                if (_isRecurring) ...[
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(
+                      labelText: 'Repeat',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: _recurrenceType ?? 'weekly',
+                    items: const [
+                      DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                      DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setState(() => _recurrenceType = v);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _pickRecurrenceEndDate,
+                    icon: const Icon(Icons.event),
+                    label: Text(
+                      _recurrenceEndDate == null
+                          ? 'Set end date (optional)'
+                          : 'Ends: ${formatDate(_recurrenceEndDate)}',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: _submit,
@@ -179,4 +247,3 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 }
-

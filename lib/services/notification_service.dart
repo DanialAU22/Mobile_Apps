@@ -157,16 +157,19 @@ class NotificationService {
     );
   }
 
-  Future<void> scheduleDailyStudyReminder() async {
+  Future<void> scheduleDailyStudyReminder({int hour = 18, int minute = 0}) async {
     if (!_initialized) return;
 
+    await cancelDailyStudyReminder();
+
     final now = DateTime.now();
-    DateTime next6pm = DateTime(now.year, now.month, now.day, 18);
-    if (!next6pm.isAfter(now)) {
-      next6pm = next6pm.add(const Duration(days: 1));
+    DateTime next =
+        DateTime(now.year, now.month, now.day, hour, minute);
+    if (!next.isAfter(now)) {
+      next = next.add(const Duration(days: 1));
     }
 
-    final tzTime = tz.TZDateTime.from(next6pm, tz.local);
+    final tzTime = tz.TZDateTime.from(next, tz.local);
 
     await _zonedScheduleWithExactFallback(
       id: _dailyStudyId,
@@ -177,7 +180,7 @@ class NotificationService {
         android: AndroidNotificationDetails(
           'daily_study_channel',
           'Daily Study',
-          channelDescription: 'Daily study reminder at 6 PM',
+          channelDescription: 'Daily study reminder',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
         ),

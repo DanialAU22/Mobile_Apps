@@ -97,8 +97,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     TaskTile(
                       task: t,
                       subjectName: subjectName(t.subjectId),
-                      onToggleComplete: (value) =>
-                          context.read<TaskProvider>().toggleCompletion(t),
+                      onToggleComplete: (value) {
+                        context.read<TaskProvider>()
+                            .toggleCompletion(t).then((next) {
+                          if (mounted && next) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Next occurrence scheduled'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        });
+                      },
                       onDelete: () =>
                           context.read<TaskProvider>().deleteTask(t),
                     ),

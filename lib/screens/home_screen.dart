@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/exam_provider.dart';
+import '../providers/study_session_provider.dart';
 import '../providers/subject_provider.dart';
 import '../providers/task_provider.dart';
 import '../widgets/exam_tile.dart';
@@ -10,6 +11,8 @@ import 'add_exam_screen.dart';
 import 'add_task_screen.dart';
 import 'calendar_screen.dart';
 import 'progress_screen.dart';
+import 'study_timer_screen.dart';
+import 'settings_screen.dart';
 import 'subjects_screen.dart';
 import 'tasks_screen.dart';
 
@@ -22,15 +25,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  int _studyStreak = 0;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
-      await context.read<SubjectProvider>().loadSubjects();
-      await context.read<TaskProvider>().loadTasks();
-      await context.read<ExamProvider>().loadExams();
-    });
+    Future.microtask(_loadData);
+  }
+
+  Future<void> _loadData() async {
+    await context.read<SubjectProvider>().loadSubjects();
+    await context.read<TaskProvider>().loadTasks();
+    await context.read<ExamProvider>().loadExams();
+    final streak =
+        await context.read<StudySessionProvider>().getProductivityStreak();
+    if (mounted) setState(() => _studyStreak = streak);
   }
 
   void _onNavTap(int index) {
@@ -49,14 +58,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String _motivationalMessage(double completionRate) {
+    if (completionRate < 0.5) return "Let's focus today!";
+    if (completionRate < 0.8) return "You're making progress!";
+    return "Great discipline!";
+  }
+
   Widget _buildTodayTab() {
-    final tasksToday =
-        context.watch<TaskProvider>().tasksForDay(DateTime.now());
-    final exams7Days =
-        context.watch<ExamProvider>().examsForNextDays(7);
+    final taskProvider = context.watch<TaskProvider>();
+    final examProvider = context.watch<ExamProvider>();
     final subjects = context.watch<SubjectProvider>().subjects;
-    final completionRate =
-        context.watch<TaskProvider>().completionRate;
+    final completionRate = taskProvider.completionRate;
+    final tasksToday = taskProvider.tasksForDay(DateTime.now());
+    final exams7Days = examProvider.examsForNextDays(7);
+    final overdueTasks = taskProvider.overdueTasks;
+    final highPriorityUpcoming = taskProvider.highPriorityUpcoming;
 
     String subjectName(String? id) {
       if (id == null) return 'No subject';
@@ -70,28 +86,130 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        await context.read<TaskProvider>().loadTasks();
-        await context.read<ExamProvider>().loadExams();
+        await _loadData();
       },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_studyStreak > 0)
+            Card(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.local_fire_department,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$_studyStreak day streak!',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (_studyStreak > 0) const SizedBox(height: 12),
+          Center(
+            child: Text(
+              _motivationalMessage(completionRate),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (overdueTasks.isNotEmpty) ...[
+            Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.red.shade700, size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  'Overdue Tasks',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.red.shade700,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (final t in overdueTasks)
+              TaskTile(
+                task: t,
+                subjectName: subjectName(t.subjectId),
+                onToggleComplete: (value) {
+                  context.read<TaskProvider>().toggleCompletion(t).then((next) {
+                    if (mounted && next) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Next occurrence scheduled'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
+                },
+                onDelete: () => context.read<TaskProvider>().deleteTask(t),
+              ),
+            const SizedBox(height: 24),
+          ],
+          if (highPriorityUpcoming.isNotEmpty) ...[
+            Text(
+              'High Priority Upcoming',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            for (final t in highPriorityUpcoming.take(5))
+              TaskTile(
+                task: t,
+                subjectName: subjectName(t.subjectId),
+                onToggleComplete: (value) {
+                  context.read<TaskProvider>().toggleCompletion(t).then((next) {
+                    if (mounted && next) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Next occurrence scheduled'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
+                },
+                onDelete: () => context.read<TaskProvider>().deleteTask(t),
+              ),
+            const SizedBox(height: 24),
+          ],
           Text(
-            'Today\'s Tasks',
+            "Today's Tasks",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           if (tasksToday.isEmpty)
-            const Text('No tasks for today.'),
-          for (final t in tasksToday)
-            TaskTile(
-              task: t,
-              subjectName: subjectName(t.subjectId),
-              onToggleComplete: (value) =>
-                  context.read<TaskProvider>().toggleCompletion(t),
-              onDelete: () =>
-                  context.read<TaskProvider>().deleteTask(t),
-            ),
+            _buildEmptyState('No tasks for today.')
+          else
+            for (final t in tasksToday)
+              TaskTile(
+                task: t,
+                subjectName: subjectName(t.subjectId),
+                onToggleComplete: (value) {
+                  context.read<TaskProvider>().toggleCompletion(t).then((next) {
+                    if (mounted && next) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Next occurrence scheduled'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  });
+                },
+                onDelete: () => context.read<TaskProvider>().deleteTask(t),
+              ),
           const SizedBox(height: 24),
           Text(
             'Upcoming Exams (7 days)',
@@ -99,37 +217,66 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 8),
           if (exams7Days.isEmpty)
-            const Text('No upcoming exams in the next week.'),
-          for (final e in exams7Days)
-            ExamTile(
-              exam: e,
-              subjectName: subjectName(e.subjectId),
-              onDelete: () =>
-                  context.read<ExamProvider>().deleteExam(e),
-            ),
+            _buildEmptyState('No upcoming exams in the next week.')
+          else
+            for (final e in exams7Days)
+              ExamTile(
+                exam: e,
+                subjectName: subjectName(e.subjectId),
+                onDelete: () => context.read<ExamProvider>().deleteExam(e),
+              ),
           const SizedBox(height: 24),
           Text(
             'Overall Progress',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
-          Center(
-            child: SizedBox(
-              height: 120,
-              width: 120,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: completionRate,
-                    strokeWidth: 10,
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: completionRate),
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) {
+              return Center(
+                child: SizedBox(
+                  height: 120,
+                  width: 120,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: value,
+                        strokeWidth: 10,
+                      ),
+                      Text(
+                        '${(completionRate * 100).toStringAsFixed(0)}%',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${(completionRate * 100).toStringAsFixed(0)}%',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
-              ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(
+            Icons.inbox_outlined,
+            size: 24,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            message,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -151,6 +298,26 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Study Deadline & Exam Planner'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.timer),
+            tooltip: 'Study Timer',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const StudyTimerScreen(),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SettingsScreen(),
+              ),
+            ),
+          ),
+        ],
       ),
       body: body,
       bottomNavigationBar: NavigationBar(
@@ -186,4 +353,3 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-

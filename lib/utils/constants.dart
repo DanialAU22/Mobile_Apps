@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 const String tableSubjects = 'subjects';
 const String tableTasks = 'tasks';
 const String tableExams = 'exams';
+const String tableStudySessions = 'study_sessions';
 
 const List<Color> kSubjectDefaultColors = <Color>[
   Colors.teal,

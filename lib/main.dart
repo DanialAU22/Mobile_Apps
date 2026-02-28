@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'database/database_helper.dart';
 import 'providers/exam_provider.dart';
+import 'providers/settings_provider.dart';
+import 'providers/study_session_provider.dart';
 import 'providers/subject_provider.dart';
 import 'providers/task_provider.dart';
 import 'screens/home_screen.dart';
@@ -14,7 +17,14 @@ Future<void> main() async {
 
   await DatabaseHelper.instance.init();
   await NotificationService.instance.init();
-  await NotificationService.instance.scheduleDailyStudyReminder();
+
+  final prefs = await SharedPreferences.getInstance();
+  final hour = prefs.getInt('reminder_hour') ?? 18;
+  final minute = prefs.getInt('reminder_minute') ?? 0;
+  await NotificationService.instance.scheduleDailyStudyReminder(
+    hour: hour,
+    minute: minute,
+  );
 
   runApp(const StudyPlannerApp());
 }
@@ -28,14 +38,22 @@ class StudyPlannerApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) {
+          final p = SettingsProvider();
+          p.load();
+          return p;
+        }),
         ChangeNotifierProvider(create: (_) => SubjectProvider()),
         ChangeNotifierProvider(create: (_) => TaskProvider()),
         ChangeNotifierProvider(create: (_) => ExamProvider()),
+        ChangeNotifierProvider(create: (_) => StudySessionProvider()),
       ],
-      child: MaterialApp(
-        title: 'Study Deadline & Exam Planner',
-        debugShowCheckedModeBanner: false,
-        themeMode: ThemeMode.system,
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, _) {
+          return MaterialApp(
+            title: 'Study Deadline & Exam Planner',
+            debugShowCheckedModeBanner: false,
+            themeMode: settings.themeMode,
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: colorSchemeSeed,
@@ -55,6 +73,8 @@ class StudyPlannerApp extends StatelessWidget {
         supportedLocales: const [
           Locale('en'),
         ],
+          );
+        },
       ),
     );
   }
