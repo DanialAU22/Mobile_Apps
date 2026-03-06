@@ -35,8 +35,9 @@ class _StudyTimerScreenState extends State<StudyTimerScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    final subjectProvider = context.read<SubjectProvider>();
     Future.microtask(() {
-      context.read<SubjectProvider>().loadSubjects();
+      subjectProvider.loadSubjects();
     });
   }
 
@@ -72,7 +73,8 @@ class _StudyTimerScreenState extends State<StudyTimerScreen>
     _timer = null;
     setState(() {
       _isRunning = false;
-      _remainingSeconds = _isFocusPhase ? _focusMinutes * 60 : _breakMinutes * 60;
+      _remainingSeconds =
+          _isFocusPhase ? _focusMinutes * 60 : _breakMinutes * 60;
     });
   }
 
@@ -160,7 +162,7 @@ class _StudyTimerScreenState extends State<StudyTimerScreen>
             children: [
               const SizedBox(height: 16),
               DropdownButtonFormField<String?>(
-                value: _selectedSubjectId,
+                initialValue: _selectedSubjectId,
                 decoration: const InputDecoration(
                   labelText: 'Link to subject (optional)',
                   border: OutlineInputBorder(),
@@ -205,7 +207,9 @@ class _StudyTimerScreenState extends State<StudyTimerScreen>
                       color: (_isFocusPhase
                               ? theme.colorScheme.primary
                               : theme.colorScheme.tertiary)
-                          .withOpacity(0.1 + _pulseController.value * 0.05),
+                          .withValues(
+                        alpha: 0.1 + _pulseController.value * 0.05,
+                      ),
                       border: Border.all(
                         color: _isFocusPhase
                             ? theme.colorScheme.primary
@@ -252,7 +256,7 @@ class _StudyTimerScreenState extends State<StudyTimerScreen>
               ),
               const SizedBox(height: 24),
               Text(
-                '${_focusMinutes} min focus · ${_breakMinutes} min break',
+                '$_focusMinutes min focus · $_breakMinutes min break',
                 style: theme.textTheme.bodySmall,
               ),
             ],

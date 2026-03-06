@@ -22,7 +22,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<SettingsProvider>().load());
+    final settingsProvider = context.read<SettingsProvider>();
+    Future.microtask(settingsProvider.load);
   }
 
   Future<void> _pickReminderTime() async {
@@ -72,6 +73,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _importBackup() async {
+    final subjectProvider = context.read<SubjectProvider>();
+    final taskProvider = context.read<TaskProvider>();
+    final examProvider = context.read<ExamProvider>();
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['json'],
@@ -90,6 +94,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
       return;
     }
+
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -115,9 +121,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       await ExportService.instance.importFromJson(path);
-      await context.read<SubjectProvider>().loadSubjects();
-      await context.read<TaskProvider>().loadTasks();
-      await context.read<ExamProvider>().loadExams();
+      await subjectProvider.loadSubjects();
+      await taskProvider.loadTasks();
+      await examProvider.loadExams();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -140,6 +146,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _resetAllData() async {
+    final subjectProvider = context.read<SubjectProvider>();
+    final taskProvider = context.read<TaskProvider>();
+    final examProvider = context.read<ExamProvider>();
+    final studySessionProvider = context.read<StudySessionProvider>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -167,10 +177,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     try {
       await DatabaseHelper.instance.deleteAllData();
-      await context.read<SubjectProvider>().loadSubjects();
-      await context.read<TaskProvider>().loadTasks();
-      await context.read<ExamProvider>().loadExams();
-      await context.read<StudySessionProvider>().loadSessions();
+      await subjectProvider.loadSubjects();
+      await taskProvider.loadTasks();
+      await examProvider.loadExams();
+      await studySessionProvider.loadSessions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

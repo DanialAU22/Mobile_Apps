@@ -23,9 +23,11 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   void initState() {
     super.initState();
+    final subjectProvider = context.read<SubjectProvider>();
+    final taskProvider = context.read<TaskProvider>();
     Future.microtask(() async {
-      await context.read<SubjectProvider>().loadSubjects();
-      await context.read<TaskProvider>().loadTasks();
+      await subjectProvider.loadSubjects();
+      await taskProvider.loadTasks();
     });
     _searchController.addListener(_onSearchChanged);
   }
@@ -63,6 +65,7 @@ class _TasksScreenState extends State<TasksScreen> {
   Widget build(BuildContext context) {
     final subjects = context.watch<SubjectProvider>().subjects;
     final taskProvider = context.watch<TaskProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     final tasks = taskProvider.visibleTasks;
     final hasFilters = _filterCompleted != null ||
         _filterOverdue ||
@@ -255,18 +258,16 @@ class _TasksScreenState extends State<TasksScreen> {
                           return TaskTile(
                             task: task,
                             subjectName: subjectNameFor(task, subjects),
-                            onToggleComplete: (value) {
-                              context.read<TaskProvider>()
-                                  .toggleCompletion(task).then((next) {
-                                if (mounted && next) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Next occurrence scheduled'),
-                                      behavior: SnackBarBehavior.floating,
-                                    ),
-                                  );
-                                }
-                              });
+                            onToggleComplete: (value) async {
+                              final next =
+                                  await taskProvider.toggleCompletion(task);
+                              if (!mounted || !next) return;
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Next occurrence scheduled'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
                             },
                             onDelete: () =>
                                 context.read<TaskProvider>().deleteTask(task),
@@ -291,9 +292,7 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            hasFilters
-                ? 'No tasks match your filters.'
-                : 'No tasks. Add one!',
+            hasFilters ? 'No tasks match your filters.' : 'No tasks. Add one!',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

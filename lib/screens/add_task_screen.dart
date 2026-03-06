@@ -34,10 +34,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       initialDate: _deadline ?? now,
     );
     if (date == null) return;
+    if (!mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_deadline ?? now),
     );
+    if (!mounted) return;
     if (time == null) {
       setState(() => _deadline = date);
       return;
@@ -148,7 +150,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     labelText: 'Subject (optional)',
                     border: OutlineInputBorder(),
                   ),
-                  value: _selectedSubject,
+                  initialValue: _selectedSubject,
                   items: [
                     for (final s in subjects)
                       DropdownMenuItem(
@@ -180,7 +182,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     labelText: 'Priority',
                     border: OutlineInputBorder(),
                   ),
-                  value: _priority,
+                  initialValue: _priority,
                   items: const [
                     DropdownMenuItem(value: 'low', child: Text('Low')),
                     DropdownMenuItem(value: 'medium', child: Text('Medium')),
@@ -212,7 +214,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       labelText: 'Repeat',
                       border: OutlineInputBorder(),
                     ),
-                    value: _recurrenceType ?? 'weekly',
+                    initialValue: _recurrenceType ?? 'weekly',
                     items: const [
                       DropdownMenuItem(value: 'daily', child: Text('Daily')),
                       DropdownMenuItem(value: 'weekly', child: Text('Weekly')),

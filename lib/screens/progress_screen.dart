@@ -29,12 +29,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   Future<void> _loadData() async {
-    await context.read<SubjectProvider>().loadSubjects();
-    await context.read<TaskProvider>().loadTasks();
-    await context.read<StudySessionProvider>().loadSessions();
-
-    final sessionProvider = context.read<StudySessionProvider>();
+    final subjectProvider = context.read<SubjectProvider>();
     final taskProvider = context.read<TaskProvider>();
+    final sessionProvider = context.read<StudySessionProvider>();
+
+    await subjectProvider.loadSubjects();
+    await taskProvider.loadTasks();
+    await sessionProvider.loadSessions();
+    if (!mounted) return;
 
     final weekly = await sessionProvider.getWeeklyStudyMinutes();
     final mostStudied = await sessionProvider.getMostStudiedSubjectId();
@@ -354,15 +356,6 @@ class _ProgressScreenState extends State<ProgressScreen> {
         ),
       ],
     );
-  }
-
-  String _formatDayLabel(String iso) {
-    try {
-      final dt = DateTime.parse(iso);
-      return '${dt.month}/${dt.day}';
-    } catch (_) {
-      return iso;
-    }
   }
 
   Widget _buildCompletionTrendChart() {

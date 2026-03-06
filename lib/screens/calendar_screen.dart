@@ -22,15 +22,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
+    final subjectProvider = context.read<SubjectProvider>();
+    final taskProvider = context.read<TaskProvider>();
+    final examProvider = context.read<ExamProvider>();
     Future.microtask(() async {
-      await context.read<SubjectProvider>().loadSubjects();
-      await context.read<TaskProvider>().loadTasks();
-      await context.read<ExamProvider>().loadExams();
+      await subjectProvider.loadSubjects();
+      await taskProvider.loadTasks();
+      await examProvider.loadExams();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final taskProvider = context.read<TaskProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     final tasks = context.watch<TaskProvider>().tasksForDay(_selectedDay);
     final exams = context.watch<ExamProvider>().examsForDay(_selectedDay);
     final subjects = context.watch<SubjectProvider>().subjects;
@@ -97,18 +102,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     TaskTile(
                       task: t,
                       subjectName: subjectName(t.subjectId),
-                      onToggleComplete: (value) {
-                        context.read<TaskProvider>()
-                            .toggleCompletion(t).then((next) {
-                          if (mounted && next) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Next occurrence scheduled'),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        });
+                      onToggleComplete: (value) async {
+                        final next = await taskProvider.toggleCompletion(t);
+                        if (!mounted || !next) return;
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Next occurrence scheduled'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
                       },
                       onDelete: () =>
                           context.read<TaskProvider>().deleteTask(t),
@@ -142,4 +144,3 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 }
-

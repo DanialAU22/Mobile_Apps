@@ -78,8 +78,7 @@ class TaskTile extends StatelessWidget {
         title: Text(
           task.title,
           style: TextStyle(
-            decoration:
-                task.isCompleted ? TextDecoration.lineThrough : null,
+            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
           ),
         ),
         subtitle: Column(
@@ -115,7 +114,7 @@ class TaskTile extends StatelessWidget {
                 priorityLabel,
                 style: const TextStyle(fontSize: 11),
               ),
-              backgroundColor: pColor.withOpacity(0.15),
+              backgroundColor: pColor.withValues(alpha: 0.15),
               labelStyle: TextStyle(
                 color: pColor,
                 fontWeight: FontWeight.w600,
@@ -129,4 +128,3 @@ class TaskTile extends StatelessWidget {
     );
   }
 }
-

@@ -126,7 +126,7 @@ class TaskProvider extends ChangeNotifier {
   }) {
     if (_filterCompleted == completed &&
         _filterOverdue == (overdue ?? false) &&
-        _filterPriority == priority) return;
+        _filterPriority == priority) {return;}
     _filterCompleted = completed;
     _filterOverdue = overdue ?? false;
     _filterPriority = priority;

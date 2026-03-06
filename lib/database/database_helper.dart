@@ -304,8 +304,6 @@ class DatabaseHelper {
     int streak = 0;
     DateTime? lastDate;
     final today = DateTime.now();
-    final todayStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     for (final row in result) {
       final dStr = row['d'] as String?;
       if (dStr == null) continue;

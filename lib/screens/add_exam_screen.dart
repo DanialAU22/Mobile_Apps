@@ -30,10 +30,12 @@ class _AddExamScreenState extends State<AddExamScreen> {
       initialDate: _dateTime ?? now,
     );
     if (date == null) return;
+    if (!mounted) return;
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_dateTime ?? now),
     );
+    if (!mounted) return;
     if (time == null) {
       setState(() {
         _dateTime = date;
@@ -109,7 +111,7 @@ class _AddExamScreenState extends State<AddExamScreen> {
                     labelText: 'Subject (optional)',
                     border: OutlineInputBorder(),
                   ),
-                  value: _selectedSubject,
+                  initialValue: _selectedSubject,
                   items: [
                     for (final s in subjects)
                       DropdownMenuItem(

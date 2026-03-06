@@ -18,9 +18,8 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => context.read<SubjectProvider>().loadSubjects(),
-    );
+    final subjectProvider = context.read<SubjectProvider>();
+    Future.microtask(() => subjectProvider.loadSubjects());
   }
 
   void _openSubjectForm({Subject? existing}) {
@@ -68,13 +67,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                               ),
                               actions: [
                                 TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(ctx).pop(false),
+                                  onPressed: () => Navigator.of(ctx).pop(false),
                                   child: const Text('Cancel'),
                                 ),
                                 FilledButton(
-                                  onPressed: () =>
-                                      Navigator.of(ctx).pop(true),
+                                  onPressed: () => Navigator.of(ctx).pop(true),
                                   child: const Text('Delete'),
                                 ),
                               ],
@@ -121,8 +118,7 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedColor =
-        widget.existing?.color ?? kSubjectDefaultColors.first;
+    _selectedColor = widget.existing?.color ?? kSubjectDefaultColors.first;
   }
 
   Future<void> _submit() async {
@@ -134,13 +130,13 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
       final subject = Subject(
         id: generateId(),
         name: _name!.trim(),
-        colorValue: _selectedColor.value,
+        colorValue: _selectedColor.toARGB32(),
       );
       await provider.addSubject(subject);
     } else {
       final updated = widget.existing!.copyWith(
         name: _name?.trim(),
-        colorValue: _selectedColor.value,
+        colorValue: _selectedColor.toARGB32(),
       );
       await provider.updateSubject(updated);
     }
@@ -231,4 +227,3 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
     );
   }
 }
-

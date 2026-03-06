@@ -34,11 +34,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
-    await context.read<SubjectProvider>().loadSubjects();
-    await context.read<TaskProvider>().loadTasks();
-    await context.read<ExamProvider>().loadExams();
-    final streak =
-        await context.read<StudySessionProvider>().getProductivityStreak();
+    final subjectProvider = context.read<SubjectProvider>();
+    final taskProvider = context.read<TaskProvider>();
+    final examProvider = context.read<ExamProvider>();
+    final studySessionProvider = context.read<StudySessionProvider>();
+
+    await subjectProvider.loadSubjects();
+    await taskProvider.loadTasks();
+    await examProvider.loadExams();
+    final streak = await studySessionProvider.getProductivityStreak();
     if (mounted) setState(() => _studyStreak = streak);
   }
 
@@ -95,7 +99,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Card(
               color: Theme.of(context).colorScheme.primaryContainer,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
                     Icon(
@@ -106,7 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       '$_studyStreak day streak!',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
                           ),
                     ),
                   ],
@@ -142,17 +149,16 @@ class _HomeScreenState extends State<HomeScreen> {
               TaskTile(
                 task: t,
                 subjectName: subjectName(t.subjectId),
-                onToggleComplete: (value) {
-                  context.read<TaskProvider>().toggleCompletion(t).then((next) {
-                    if (mounted && next) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Next occurrence scheduled'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  });
+                onToggleComplete: (value) async {
+                  final next =
+                      await context.read<TaskProvider>().toggleCompletion(t);
+                  if (!mounted || !next) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Next occurrence scheduled'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 },
                 onDelete: () => context.read<TaskProvider>().deleteTask(t),
               ),
@@ -168,17 +174,16 @@ class _HomeScreenState extends State<HomeScreen> {
               TaskTile(
                 task: t,
                 subjectName: subjectName(t.subjectId),
-                onToggleComplete: (value) {
-                  context.read<TaskProvider>().toggleCompletion(t).then((next) {
-                    if (mounted && next) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Next occurrence scheduled'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  });
+                onToggleComplete: (value) async {
+                  final next =
+                      await context.read<TaskProvider>().toggleCompletion(t);
+                  if (!mounted || !next) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Next occurrence scheduled'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 },
                 onDelete: () => context.read<TaskProvider>().deleteTask(t),
               ),
@@ -196,17 +201,16 @@ class _HomeScreenState extends State<HomeScreen> {
               TaskTile(
                 task: t,
                 subjectName: subjectName(t.subjectId),
-                onToggleComplete: (value) {
-                  context.read<TaskProvider>().toggleCompletion(t).then((next) {
-                    if (mounted && next) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Next occurrence scheduled'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  });
+                onToggleComplete: (value) async {
+                  final next =
+                      await context.read<TaskProvider>().toggleCompletion(t);
+                  if (!mounted || !next) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Next occurrence scheduled'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 },
                 onDelete: () => context.read<TaskProvider>().deleteTask(t),
               ),

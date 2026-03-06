@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../database/database_helper.dart';
 import '../models/study_session.dart';
-import '../utils/helpers.dart';
 
 class StudySessionProvider extends ChangeNotifier {
   final List<StudySession> _sessions = [];
